@@ -3,9 +3,9 @@
 namespace App\Entity;
 
 use App\Repository\RoomRepository;
+use App\ValueObject\RoomCapacity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\IdGenerator\UuidGenerator;
 use Symfony\Bridge\Doctrine\Types\UuidType;
@@ -24,9 +24,8 @@ class Room
     #[Assert\NotBlank]
     private ?string $name = null;
 
-    #[ORM\Column(type: Types::SMALLINT)]
-    #[Assert\Positive]
-    private ?int $capacity = null;
+    #[ORM\Column(type: "integer")]
+    private int $capacity;
 
     #[ORM\Column]
     private ?bool $isActive = null;
@@ -40,6 +39,7 @@ class Room
     public function __construct()
     {
         $this->equipment = new ArrayCollection();
+        $this->isActive = true;
     }
 
     public function getId(): Uuid
@@ -59,15 +59,20 @@ class Room
         return $this;
     }
 
-    public function getCapacity(): ?int
+    public function getCapacity(): RoomCapacity
     {
-        return $this->capacity;
+        return new RoomCapacity($this->capacity);
     }
 
-    public function setCapacity(int $capacity): static
+    public function setCapacity(RoomCapacity $capacity): static
     {
-        $this->capacity = $capacity;
+        $this->capacity = $capacity->getValue();
+        return $this;
+    }
 
+    public function setCapacityInt(int $capacity): static
+    {
+        $this->capacity = (new RoomCapacity($capacity))->getValue();
         return $this;
     }
 

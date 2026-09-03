@@ -23,8 +23,7 @@ class RoomService
     {
         $room = new Room();
         $room->setName($request->name);
-        $room->setCapacity($request->capacity);
-        $room->setIsActive(true);
+        $room->setCapacityInt($request->capacity);
 
         foreach ($request->equipmentIds as $equipmentId) {
             $equipment = $this->equipmentRepository->find($equipmentId);
