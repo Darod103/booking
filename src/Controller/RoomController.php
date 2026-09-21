@@ -26,7 +26,7 @@ final class RoomController extends AbstractController
         return $this->json($rooms);
     }
 
-    #[Route('/api/rooms', name: 'app_rooms_create', methods: ['POST'])]
+    #[Route('/api/room', name: 'app_rooms_create', methods: ['POST'])]
     public function create(#[MapRequestPayload] CreateRoomRequest $request): JsonResponse
     {
       $room =$this->roomService->create($request);

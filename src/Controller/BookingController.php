@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Dto\CancelBookingRequest;
 use App\Dto\CreateBookingRequest;
 use App\Exception\BookingConflictException;
 use App\Exception\CapacityExceededException;
@@ -29,10 +30,17 @@ final class BookingController extends AbstractController
      * @throws InvalidBookingPeriodException
      * @throws RoomNotFoundException
      */
-    #[Route('api/bookings', name: 'app_booking_create',methods: ['POST'])]
-    public function create( #[MapRequestPayload] CreateBookingRequest $bookingCreateRequest): JsonResponse
+    #[Route('api/bookings', name: 'app_booking_create', methods: ['POST'])]
+    public function create(#[MapRequestPayload] CreateBookingRequest $bookingCreateRequest): JsonResponse
     {
         $booking = $this->bookingService->createBooking($bookingCreateRequest);
-        return $this->json($booking,Response::HTTP_CREATED);
+        return $this->json($booking, Response::HTTP_CREATED);
+    }
+
+    #[Route('api/bookings/cancel', name: 'app_booking_cancel', methods: ['POST'])]
+    public function cancel(#[MapRequestPayload] CancelBookingRequest $request): JsonResponse
+    {
+        $booking = $this->bookingService->cancelBooking($request->bookingId);
+        return $this->json($booking);
     }
 }
