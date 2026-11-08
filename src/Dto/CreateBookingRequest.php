@@ -1,25 +1,25 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Dto;
 
+use App\ValueObject\BookingParticipants;
 use Symfony\Component\Validator\Constraints as Assert;
 
 class CreateBookingRequest
 {
-    function __construct(
-        #[Assert\NotBlank]
-        public string             $roomId,
+    public function __construct(
+        #[Assert\NotBlank(normalizer: 'trim')]
+        #[Assert\Uuid]
+        public string $roomId,
         #[Assert\NotNull]
         public \DateTimeImmutable $startAt,
         #[Assert\NotNull]
         public \DateTimeImmutable $endAt,
-        #[Assert\NotBlank]
-        public string             $organizerId,
-        #[Assert\Positive]
-        public int                $participants
-
-    )
-    {
+        #[Assert\NotBlank(normalizer: 'trim')]
+        public string $organizerId,
+        #[Assert\Range(min: BookingParticipants::MIN, max: BookingParticipants::MAX)]
+        public int $participants,
+    ) {
     }
-
 }

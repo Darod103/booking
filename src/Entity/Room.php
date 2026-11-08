@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Entity;
 
@@ -6,6 +7,7 @@ use App\Repository\RoomRepository;
 use App\ValueObject\RoomCapacity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\IdGenerator\UuidGenerator;
 use Symfony\Bridge\Doctrine\Types\UuidType;
@@ -24,7 +26,7 @@ class Room
     #[Assert\NotBlank]
     private ?string $name = null;
 
-    #[ORM\Column(type: "integer")]
+    #[ORM\Column(type: Types::SMALLINT)]
     private int $capacity;
 
     #[ORM\Column]

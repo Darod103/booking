@@ -5,8 +5,8 @@ namespace App\ValueObject;
 
 final class BookingParticipants
 {
-    private const int MIN = 1;
-    private const int MAX = 10000;
+    public const int MIN = 1;
+    public const int MAX = 10000;
 
     public function __construct(private readonly int $value)
     {
