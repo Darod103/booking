@@ -1,14 +1,15 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Exception;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Attribute\WithHttpStatus;
 
-#[WithHttpStatus(Response::HTTP_BAD_REQUEST)]
 class InvalidBookingPeriodException extends \Exception
 {
-    public static function create(): self
+    public static function tooLong(string $maxDuration): self
     {
-        return new self("Некорректный период бронирования");
+        return new self(sprintf(
+            'Бронирование не может длиться дольше %s',
+            new \DateInterval($maxDuration)->format('%h ч.'),
+        ));
     }
 }
