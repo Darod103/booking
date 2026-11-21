@@ -1,14 +1,16 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Entity;
 
 use App\Enum\BookingStatus;
-use App\Exception\BookingConflictException;
+use App\Exception\BookingAlreadyCancelledException;
+use App\Exception\BookingAlreadyStartedException;
 use App\Exception\CapacityExceededException;
 use App\Exception\RoomNotActiveException;
 use App\Repository\BookingRepository;
-use App\ValueObject\BookingDates;
 use App\ValueObject\BookingParticipants;
+use App\ValueObject\BookingPeriod;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\IdGenerator\UuidGenerator;
@@ -25,32 +27,40 @@ class Booking
     private ?Uuid $id = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $organizerId = null;
+    private string $organizerId;
 
-    #[ORM\Column]
-    private ?\DateTimeImmutable $startAt = null;
-
-    #[ORM\Column]
-    private ?\DateTimeImmutable $endAt = null;
+    #[ORM\Embedded(class: BookingPeriod::class, columnPrefix: false)]
+    private BookingPeriod $period;
 
     #[ORM\Column(type: Types::SMALLINT)]
-    private int $participants = 1;
+    private int $participants;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
-    private ?Room $room = null;
+    private Room $room;
 
     #[ORM\Column(enumType: BookingStatus::class)]
     private BookingStatus $status = BookingStatus::Active;
 
+    private function __construct(string $organizerId, BookingPeriod $period, int $participants, Room $room)
+    {
+        $this->organizerId = $organizerId;
+        $this->period = $period;
+        $this->participants = $participants;
+        $this->room = $room;
+    }
+
+    /**
+     * @throws RoomNotActiveException
+     * @throws CapacityExceededException
+     */
     public static function create(
         string $organizerId,
-        BookingDates $dates,
+        BookingPeriod $period,
         BookingParticipants $participants,
         Room $room,
-        array $existingBookings = []
     ): self {
-        if (empty($organizerId)) {
+        if (trim($organizerId) === '') {
             throw new \InvalidArgumentException('Организатор не может быть пустым');
         }
 
@@ -62,25 +72,29 @@ class Booking
             throw CapacityExceededException::withLimit($room->getCapacity()->toInt());
         }
 
-        foreach ($existingBookings as $booking) {
-            if ($booking->overlaps($dates)) {
-                throw BookingConflictException::create();
-            }
-        }
-
-        $self = new self();
-        $self->organizerId = $organizerId;
-        $self->startAt = $dates->getStartAt();
-        $self->endAt = $dates->getEndAt();
-        $self->participants = $participants->getValue();
-        $self->room = $room;
-
-        return $self;
+        return new self($organizerId, $period, $participants->toInt(), $room);
     }
 
-    private function overlaps(BookingDates $dates): bool
+    /**
+     * @throws BookingAlreadyCancelledException
+     * @throws BookingAlreadyStartedException
+     */
+    public function cancel(\DateTimeImmutable $now): void
     {
-        return new BookingDates($this->startAt, $this->endAt)->overlaps($dates);
+        if ($this->isCancelled()) {
+            throw BookingAlreadyCancelledException::create();
+        }
+
+        if (!$this->period->range->startsAfter($now)) {
+            throw BookingAlreadyStartedException::create();
+        }
+
+        $this->status = BookingStatus::Cancelled;
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === BookingStatus::Cancelled;
     }
 
     public function getId(): ?Uuid
@@ -88,47 +102,19 @@ class Booking
         return $this->id;
     }
 
-    public function getOrganizerId(): ?string
+    public function getOrganizerId(): string
     {
         return $this->organizerId;
     }
 
-    public function setOrganizerId(string $organizerId): static
+    public function getStartAt(): \DateTimeImmutable
     {
-        if (empty($organizerId)) {
-            throw new \InvalidArgumentException('Организатор не может быть пустым');
-        }
-        $this->organizerId = $organizerId;
-        return $this;
+        return $this->period->range->startAt;
     }
 
-    public function getStartAt(): ?\DateTimeImmutable
+    public function getEndAt(): \DateTimeImmutable
     {
-        return $this->startAt;
-    }
-
-    public function setStartAt(\DateTimeImmutable $startAt): static
-    {
-        $this->startAt = $startAt;
-        return $this;
-    }
-
-    public function getEndAt(): ?\DateTimeImmutable
-    {
-        return $this->endAt;
-    }
-
-    public function setEndAt(\DateTimeImmutable $endAt): static
-    {
-        $this->endAt = $endAt;
-        return $this;
-    }
-
-    public function setDates(BookingDates $dates): static
-    {
-        $this->startAt = $dates->getStartAt();
-        $this->endAt = $dates->getEndAt();
-        return $this;
+        return $this->period->range->endAt;
     }
 
     public function getParticipants(): int
@@ -136,46 +122,13 @@ class Booking
         return $this->participants;
     }
 
-    public function setParticipants(int $participants): static
-    {
-        $vo = new BookingParticipants($participants);
-        $this->participants = $vo->getValue();
-        return $this;
-    }
-
-    public function getRoom(): ?Room
+    public function getRoom(): Room
     {
         return $this->room;
     }
 
-    public function setRoom(?Room $room): static
-    {
-        $this->room = $room;
-
-        return $this;
-    }
-
-    public function getStatus(): ?BookingStatus
+    public function getStatus(): BookingStatus
     {
         return $this->status;
-    }
-
-    public function setStatus(BookingStatus $status): static
-    {
-        $this->status = $status;
-        return $this;
-    }
-
-    public function cancel(): void
-    {
-        if ($this->status === BookingStatus::Cancelled) {
-            throw new \InvalidArgumentException('Бронирование уже отменено');
-        }
-
-        if ($this->startAt <= new \DateTimeImmutable()) {
-            throw new \InvalidArgumentException('Нельзя отменить бронирование которое уже началось');
-        }
-
-        $this->status = BookingStatus::Cancelled;
     }
 }

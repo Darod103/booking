@@ -8,6 +8,18 @@ framework:
     #esi: true
     #fragments: true
 
+    exceptions:
+        App\Exception\InvalidTimeRangeException: { status_code: 400, log_level: info }
+        App\Exception\InvalidBookingPeriodException: { status_code: 400, log_level: info }
+        App\Exception\CapacityExceededException: { status_code: 400, log_level: info }
+        App\Exception\EquipmentNotFoundException: { status_code: 400, log_level: info }
+        App\Exception\RoomNotFoundException: { status_code: 404, log_level: info }
+        App\Exception\BookingNotFoundException: { status_code: 404, log_level: info }
+        App\Exception\BookingConflictException: { status_code: 409, log_level: info }
+        App\Exception\RoomNotActiveException: { status_code: 409, log_level: info }
+        App\Exception\BookingAlreadyCancelledException: { status_code: 409, log_level: info }
+        App\Exception\BookingAlreadyStartedException: { status_code: 409, log_level: info }
+
 when@test:
     framework:
         test: true

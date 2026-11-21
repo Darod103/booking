@@ -1,10 +1,12 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Repository;
 
 use App\Entity\Booking;
 use App\Entity\Room;
 use App\Enum\BookingStatus;
+use App\ValueObject\TimeRange;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bridge\Doctrine\Types\UuidType;
@@ -43,18 +45,21 @@ class BookingRepository extends ServiceEntityRepository
 //        ;
 //    }
 
-    public function findOverlapping(Room $room, \DateTimeImmutable $start, \DateTimeImmutable $end): array
+    public function existsBlockingOverlap(Room $room, TimeRange $range): bool
     {
-        return $this->createQueryBuilder('b')
+        $count = $this->createQueryBuilder('b')
+            ->select('COUNT(b.id)')
             ->andWhere('b.room = :room')
-            ->andWhere('b.status = :active')
-            ->andWhere('b.startAt < :end')
-            ->andWhere('b.endAt > :start')
+            ->andWhere('b.status IN (:blockingStatuses)')
+            ->andWhere('b.period.range.startAt < :end')
+            ->andWhere('b.period.range.endAt > :start')
             ->setParameter('room', $room->getId(), UuidType::NAME)
-            ->setParameter('active', BookingStatus::Active)
-            ->setParameter('start', $start)
-            ->setParameter('end', $end)
+            ->setParameter('blockingStatuses', BookingStatus::blockingStatuses())
+            ->setParameter('start', $range->startAt)
+            ->setParameter('end', $range->endAt)
             ->getQuery()
-            ->getResult();
+            ->getSingleScalarResult();
+
+        return $count > 0;
     }
 }
